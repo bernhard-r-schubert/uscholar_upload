@@ -89,9 +89,9 @@ else:
     xlsx_metadata['T']=''
 
 if len(issn)<1: #Sherpa-Link erzeugen, mit ISSN wenn vorhanden
-    xlsx_metadata['AL']='=HYPERLINK(CONCATENATE("http://www.sherpa.ac.uk/romeo/search.php?jtitle=",Q'+str(newrow)+'))'
+    xlsx_metadata['AL']='=HYPERLINK(CONCATENATE("https://v2.sherpa.ac.uk/cgi/search/publication/basic?publication_title-auto=",Q'+str(newrow)+'))' #warum nicht mit Variable wie bei issn?
 else:
-    xlsx_metadata['AL']='=HYPERLINK("http://www.sherpa.ac.uk/romeo/search.php?issn='+str(issn)+'")'
+    xlsx_metadata['AL']='=HYPERLINK("https://v2.sherpa.ac.uk/cgi/search/publication/basic?publication_title-auto='+str(issn)+'")'
 
 for k,v in dc_metadata.items(): #Mapping vom Inhalt der dc-Elemente auf die Tabellenspalten ins Tabellendictionary
     try:
