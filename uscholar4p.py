@@ -11,9 +11,9 @@ ns={'dc':'http://purl.org/dc/elements/1.1/', 'oai_dc':'http://www.openarchives.o
 
 while True:
 
-    url = input('ID eingeben oder Enter zum beenden: ')
+    ID = input('ID eingeben oder Enter zum beenden: ')
 
-    if len(url)<1:
+    if len(ID)<1:
         exit()
 
     xlsx=load_workbook('uscholar checks author upload.xlsx') #Tabelle laden
@@ -21,27 +21,27 @@ while True:
 
     newrow=int(sheet.max_row)+1 #Bestimmung der nächsten Zeile
 
-    IDexists=False
+    IDexists = False #Boole'sche Variable, die aussagt, ob die ID bereits in der Tabelle vorhanden ist, damit keine Dubletten erzeugt werden
 
     for cellObj in sheet['A1':str('A'+str(sheet.max_row))]: #Prüfung auf existieren der ID, verschachtelter Loop
         for cell in cellObj:
-            if str(url) in str(cell.value):
+            if str(ID) in str(cell.value):
                 IDexists = True
             else:
                 break
         else:
             break
 
-    if IDexists != False:
+    if IDexists != False: #Nur Daten lesen und schreiben, wenn ID noch nicht in der Tabelle existiert
         print('ID existiert bereits, Eingabefehler?')
         continue
     else:
-        url='https://services.phaidra.univie.ac.at/api/object/o:'+str(url)+'/index/dc.xml'
+        url='https://services.phaidra.univie.ac.at/api/object/o:'+str(ID)+'/index/dc.xml'
 
-    try:
+    try: #Wenn ID invalide ist, wird Fehlermeldung erzeugt
         data = urllib.request.urlopen(url).read()
     except:
-        print('Keine valide ID')
+        print('Keine valide ID, Eingabefehler?')
         continue
 
     tree = ET.fromstring(data)
@@ -61,8 +61,8 @@ while True:
         ErschienenIn=''
     else:
         for source in sources:
-            if 'ISSN:' in source.text:
-                issn=re.findall('ISSN:(.+)',source.text)[0] #ISSN für Sherpa-Abfrage
+            if 'issn:' in source.text:
+                issn=re.findall('issn:(.+)',source.text)[0] #ISSN für Sherpa-Abfrage
                 continue
             else:
                 #issn='' eigentlich falsch an dieser Stelle?!
@@ -71,16 +71,22 @@ while True:
     EmbargoEnde='' #Damit Embargo-Enddatum leer wenn nicht vorhanden
 
     dates=tree.findall('dc:date',ns) #Datum finden
-    for date in dates:
-        if 'info:eu-repo/date/embargoEnd/' in date.text:
-            EmbargoEnde=re.findall('info:eu-repo/date/embargoEnd/(.+)',date.text)[0] #Embargo-Enddatum holen
-            continue
-        else:
-            Erscheinungsdatum=str(date.text)
+    if not dates:
+        Erscheinungsdatum='' #Damit Datum leer wenn nicht vorhanden
+    else:
+        for date in dates:
+            if 'info:eu-repo/date/embargoEnd/' in date.text:
+                EmbargoEnde=re.findall('info:eu-repo/date/embargoEnd/(.+)',date.text)[0] #Embargo-Enddatum holen
+                continue
+            else:
+                Erscheinungsdatum=str(date.text)
 
     dc_metadata={'N':'dc:creator', 'O':'dc:title', 'S':'dc:publisher'} #Dictionary für Elemente und Spalten
 
-    xlsx_metadata={'R':Erscheinungsdatum,'U':EmbargoEnde,'A':PhaidraID,'Q':ErschienenIn,'B':'ACCEPTANCE','C':'PENDING','G':str(now)[:10],'AG':'=HYPERLINK(CONCATENATE("https://uscholar.univie.ac.at/o:",A'+str(newrow)+'))','AH':'=HYPERLINK(CONCATENATE("https://phaidra.univie.ac.at/detail_object/o:",A'+str(newrow)+'))','AI':'=HYPERLINK(CONCATENATE("https://redmine.phaidra.org/redmine/issues/",L'+str(newrow)+'))','AJ':'=CONCATENATE("o",A'+str(newrow)+'," - ",E'+str(newrow)+'," - ",O'+str(newrow)+'," - ",C'+str(newrow)+')','AK':'=CONCATENATE("10.25365/phaidra.",M'+str(newrow)+'," > https://phaidra.univie.ac.at/o:",A'+str(newrow)+'," OK")'} #Dictionary für Tabelle, mit fixen Werten und Formeln vorausgefüllt
+    xlsx_metadata={'R':Erscheinungsdatum,'U':EmbargoEnde,'A':PhaidraID,'Q':ErschienenIn,'B':'ACCEPTANCE','C':'PENDING','G':str(now)[:10],'AG':'=HYPERLINK(CONCATENATE("https://uscholar.univie.ac.at/o:",A'+str(newrow)+'))',
+                   'AH':'=HYPERLINK(CONCATENATE("https://phaidra.univie.ac.at/detail_object/o:",A'+str(newrow)+'))','AI':'=HYPERLINK(CONCATENATE("https://redmine.phaidra.org/redmine/issues/",L'+str(newrow)+'))',
+                   'AJ':'=CONCATENATE("o",A'+str(newrow)+'," - ",E'+str(newrow)+'," - ",O'+str(newrow)+'," - ",C'+str(newrow)+')',
+                   'AK':'=CONCATENATE("10.25365/phaidra.",M'+str(newrow)+'," > https://phaidra.univie.ac.at/o:",A'+str(newrow)+'," OK")'} #Dictionary für Tabelle, mit fixen Werten und Formeln vorausgefüllt
 
     accessrights={'closedAccess':'Gesperrter Zugang','embargoedAccess':'Embargo','restrictedAccess':'Beschränkter Zugang','openAccess':'Frei zugänglich'} #Dictionary für Rechte
 
@@ -121,3 +127,5 @@ while True:
             continue
 
     xlsx.save('uscholar checks author upload.xlsx')
+
+    print('o:'+str(ID)+' erfolgreich in Zeile '+str(newrow)+' geschrieben!') #Erfolgsbestätigung
