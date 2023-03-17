@@ -3,4 +3,4 @@ Autopopulate OAO's documentation with u:scholar DC metadata
 
 Build .exe using [PyInstaller](https://www.pyinstaller.org/)
 
-`pyinstaller -F`
+`pyinstaller -F script.py`
