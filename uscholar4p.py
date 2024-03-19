@@ -1,5 +1,5 @@
 import urllib.request, urllib.parse, urllib.error
-import xml.etree.ElementTree as ET
+from lxml import etree
 import re
 from openpyxl import Workbook, load_workbook
 from sys import exit
@@ -36,15 +36,18 @@ while True:
         print('ID existiert bereits, Eingabefehler?')
         continue
     else:
-        url='https://services.phaidra.univie.ac.at/api/object/o:'+str(ID)+'/index/dc.xml'
+        url='https://services.phaidra.univie.ac.at/api/object/o:'+str(ID)+'/index/dc'
 
     try: #Wenn ID invalide ist, wird Fehlermeldung erzeugt
         data = urllib.request.urlopen(url).read()
+
     except:
         print('Keine valide ID, Eingabefehler?')
         continue
-
-    tree = ET.fromstring(data)
+    
+    my_parser=etree.XMLParser(recover=True) #Steuerzeichen filtern
+    tree = etree.fromstring(data, parser=my_parser)
+    #tree=etree.tostring(xml)
 
     identifiers=tree.findall('dc:identifier',ns)
 
@@ -84,11 +87,11 @@ while True:
     dc_metadata={'N':'dc:creator', 'O':'dc:title', 'S':'dc:publisher'} #Dictionary für Elemente und Spalten
 
     xlsx_metadata={'R':Erscheinungsdatum,'U':EmbargoEnde,'A':PhaidraID,'Q':ErschienenIn,'B':'ACCEPTANCE','C':'PENDING','G':str(now)[:10],'AG':'=HYPERLINK(CONCATENATE("https://uscholar.univie.ac.at/o:",A'+str(newrow)+'))',
-                   'AH':'=HYPERLINK(CONCATENATE("https://phaidra.univie.ac.at/detail_object/o:",A'+str(newrow)+'))','AI':'=HYPERLINK(CONCATENATE("https://redmine.phaidra.org/redmine/issues/",L'+str(newrow)+'))',
-                   'AJ':'=CONCATENATE("o",A'+str(newrow)+'," - ",E'+str(newrow)+'," - ",O'+str(newrow)+'," - ",C'+str(newrow)+')',
-                   'AK':'=CONCATENATE("10.25365/phaidra.",M'+str(newrow)+'," > https://phaidra.univie.ac.at/o:",A'+str(newrow)+'," OK")'} #Dictionary für Tabelle, mit fixen Werten und Formeln vorausgefüllt
+                   'AH':'=HYPERLINK(CONCATENATE("https://redmine.phaidra.org/redmine/issues/",L'+str(newrow)+'))',
+                   'AI':'=CONCATENATE("o",A'+str(newrow)+'," - ",E'+str(newrow)+'," - ",O'+str(newrow)+'," - ",C'+str(newrow)+')',
+                   'AJ':'=CONCATENATE("10.25365/phaidra.",M'+str(newrow)+'," > https://phaidra.univie.ac.at/o:",A'+str(newrow)+'," OK")'} #Dictionary für Tabelle, mit fixen Werten und Formeln vorausgefüllt
 
-    accessrights={'closedAccess':'Gesperrter Zugang','embargoedAccess':'Embargo','restrictedAccess':'Beschränkter Zugang','openAccess':'Frei zugänglich'} #Dictionary für Rechte
+    accessrights={'metadata only access':'Gesperrter Zugang','embargoed access':'Embargo','restricted access':'Beschränkter Zugang','open access':'Frei zugänglich'} #Dictionary für Rechte
 
     rights=tree.findall('dc:rights',ns)
 
@@ -104,9 +107,9 @@ while True:
         xlsx_metadata['T']=''
 
     if len(issn)<1: #Sherpa-Link erzeugen, mit ISSN wenn vorhanden
-        xlsx_metadata['AL']='=HYPERLINK(CONCATENATE("https://v2.sherpa.ac.uk/cgi/search/publication/basic?publication_title-auto=",Q'+str(newrow)+'))' #warum nicht mit Variable wie bei issn?
+        xlsx_metadata['AK']='=HYPERLINK(CONCATENATE("https://v2.sherpa.ac.uk/cgi/search/publication/basic?publication_title-auto=",Q'+str(newrow)+'))' #warum nicht mit Variable wie bei issn?
     else:
-        xlsx_metadata['AL']='=HYPERLINK("https://v2.sherpa.ac.uk/cgi/search/publication/basic?publication_title-auto='+str(issn)+'")'
+        xlsx_metadata['AK']='=HYPERLINK("https://v2.sherpa.ac.uk/cgi/search/publication/basic?publication_title-auto='+str(issn)+'")'
 
     for k,v in dc_metadata.items(): #Mapping vom Inhalt der dc-Elemente auf die Tabellenspalten ins Tabellendictionary
         try:
